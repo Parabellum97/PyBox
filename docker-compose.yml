@@ -1,0 +1,75 @@
+services:
+  # Jupyter Kernel Gateway - 代码执行引擎 (内部服务)
+  kernel:
+    build:
+      context: .
+      dockerfile: Dockerfile.kernel
+    container_name: pybox-kernel
+    volumes:
+      - ./data:/mnt/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g,uid=1000,gid=100
+      - /var/tmp:rw,noexec,nosuid,size=512m,uid=1000,gid=100
+    environment:
+      - JUPYTER_ENABLE_LAB=no
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/api')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # MCP Server - 对外接口层 (Streamable HTTP)
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: pybox-mcp
+    volumes:
+      - ./data:/mnt/data
+    ports:
+      - "6811:8001"  # MCP Server 监听 8001 端口
+    environment:
+      - KERNEL_GATEWAY_URL=http://kernel:8888
+      - DATA_DIR=/mnt/data
+      - EXEC_TIMEOUT=60
+      # 文件下载链接的前缀，部署到外网时请改为你的公网域名
+      # 例如: https://your-domain.com/data
+      - FILE_DOWNLOAD_URL=${FILE_DOWNLOAD_URL:-http://localhost:6812/data}
+      - API_KEY=${API_KEY:-}
+      - WS_MAX_SIZE=${WS_MAX_SIZE:-5242880}
+    networks:
+      - internal
+    depends_on:
+      kernel:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Nginx - 文件下载服务
+  nginx:
+    image: nginx:alpine
+    container_name: pybox-nginx
+    volumes:
+      - ./data:/mnt/data:ro      # 只读挂载
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "6812:8080"              # 文件下载服务端口
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local

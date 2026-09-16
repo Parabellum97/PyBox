@@ -1,0 +1,61 @@
+FROM jupyter/scipy-notebook:latest
+
+# 切换到 root 用户进行安装
+USER root
+
+# 1. 安装系统级依赖 (Tesseract OCR)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-chi-sim \
+    tesseract-ocr-chi-tra \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. 安装 Kernel Gateway (关键!)
+RUN pip install --no-cache-dir jupyter_kernel_gateway
+
+# 3. 安装常用 Python 库
+RUN pip install --no-cache-dir \
+    # === 数据分析 === \
+    pandas numpy scipy \
+    openpyxl xlrd xlsxwriter tabulate\
+    # === 可视化 === \
+    matplotlib seaborn plotly \
+    # === 机器学习 === \
+    scikit-learn xgboost lightgbm \
+    # === 图像处理 === \
+    pillow pytesseract \
+    # === 文件处理 === \
+    PyPDF2 python-docx python-pptx \
+    # === 办公自动化 === \
+    reportlab \
+    # === 数据生成 === \
+    faker mimesis \
+    # === 其他工具 === \
+    requests beautifulsoup4 lxml \
+    tqdm \
+    python-dateutil pytz
+
+# 4. 创建持久化目录并赋权给 jovyan 用户
+RUN mkdir -p /mnt/data && chown -R jovyan:users /mnt/data
+
+# 5. 创建并配置临时目录（修复 FileNotFoundError）
+RUN mkdir -p /tmp /var/tmp /home/jovyan/.ipython && \
+    chmod 1777 /tmp /var/tmp && \
+    chown -R jovyan:users /home/jovyan/.ipython
+
+# 6. 切换回非 root 用户 (安全最佳实践)
+USER jovyan
+
+# 7. 设置工作目录
+WORKDIR /mnt/data
+
+# 8. 暴露端口
+EXPOSE 8888
+
+# 9. 启动 Kernel Gateway
+CMD ["jupyter", "kernelgateway", \
+     "--KernelGatewayApp.ip=0.0.0.0", \
+     "--KernelGatewayApp.port=8888", \
+     "--KernelGatewayApp.allow_origin=*", \
+     "--KernelGatewayApp.allow_credentials=*"]

@@ -1,0 +1,59 @@
+# PyBox .gitignore
+
+# ===== 数据目录 (持久化文件) =====
+data/
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.json
+*.pkl
+*.parquet
+*.xlsx
+*.pdf
+
+# ===== 环境变量与密钥 =====
+.env
+.env.server
+.env.local
+.env.*.local
+
+# ===== 本地调试日志 =====
+*.log
+log.md
+
+# ===== 临时/调试文件 =====
+*.tar.gz
+curl_test_*.txt
+*.bak
+*.swp
+*~
+
+# ===== 本地备份文件夹 (不进 git) =====
+backup/
+local/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db

@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 安装依赖 (移除版本限制,让 pip 自动解决依赖)
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    httpx \
+    websockets \
+    pydantic \
+    mcp \
+    fastmcp \
+    sse-starlette
+
+# 复制 MCP 服务代码
+COPY pybox_mcp_streamable.py .
+
+# 创建数据目录
+RUN mkdir -p /mnt/data
+
+# 暴露端口
+EXPOSE 8000
+
+# 启动服务
+# 启动 MCP Server (streamable-http)
+CMD ["python", "pybox_mcp_streamable.py"]
